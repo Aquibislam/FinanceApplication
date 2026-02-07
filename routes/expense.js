@@ -3,7 +3,10 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const expenseController = require('../controllers/expenseController');
 
-// All routes are protected
+// Public route for UPI expenses (Shortcuts)
+router.post('/:email/:month/upi', expenseController.addUpiExpense);
+
+// All other routes are protected
 router.use(protect);
 
 // Routes for monthly expenses

@@ -54,19 +54,19 @@ exports.addExpense = async (req, res, next) => {
 
             const normalizedSubExpenses = Array.isArray(itemSubExpenses)
                 ? itemSubExpenses.map((sub) => ({
-                      title: sub.title,
-                      amount: sub.amount,
-                      date: sub.date,
-                  }))
+                    title: sub.title,
+                    amount: sub.amount,
+                    date: sub.date,
+                }))
                 : [];
 
             // If sub-expenses are provided, header amount is derived from them.
             const headerAmount =
                 normalizedSubExpenses.length > 0
                     ? normalizedSubExpenses.reduce(
-                          (total, sub) => total + (sub.amount || 0),
-                          0
-                      )
+                        (total, sub) => total + (sub.amount || 0),
+                        0
+                    )
                     : itemAmount;
 
             return {
@@ -348,6 +348,77 @@ exports.deleteMonthlyRecord = async (req, res, next) => {
         res.status(200).json({
             success: true,
             message: `All expenses for ${month} deleted successfully`,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Add a UPI expense automatically (for Shortcuts)
+// @route   POST /api/expenses/:email/:month/upi
+// @access  Private
+exports.addUpiExpense = async (req, res, next) => {
+    try {
+        const { email, month } = req.params;
+        const { amount, date } = req.body;
+
+        if (!amount || !date) {
+            return res.status(400).json({
+                success: false,
+                message: 'Amount and date are required',
+            });
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        // Security check removed for this public endpoint as requested
+        // intended for simple automation where user authentication is not available
+        // if (user._id.toString() !== req.user.id) { ... }
+
+        // Find or create the Expense document for this user and month
+        let monthlyExpense = await Expense.findOne({ user: user._id, month });
+
+        if (!monthlyExpense) {
+            monthlyExpense = new Expense({
+                user: user._id,
+                month,
+                netSalary: user.netPay || 0, // Populate from user profile
+                expenses: [],
+            });
+        }
+
+        // Find existing "UPI" expense
+        let upiExpense = monthlyExpense.expenses.find(e => e.title === 'UPI');
+
+        const newSubExpense = {
+            title: date,
+            amount: Number(amount)
+        };
+
+        if (upiExpense) {
+            // Append to existing UPI expense
+            upiExpense.subExpenses.push(newSubExpense);
+        } else {
+            // Create new UPI expense
+            monthlyExpense.expenses.push({
+                title: 'UPI',
+                amount: Number(amount), // Initial amount
+                subExpenses: [newSubExpense]
+            });
+        }
+
+        await monthlyExpense.save();
+
+        res.status(200).json({
+            success: true,
+            data: monthlyExpense,
         });
     } catch (error) {
         next(error);
