@@ -392,6 +392,22 @@ exports.addUpiExpense = async (req, res, next) => {
                 netSalary: user.netPay || 0, // Populate from user profile
                 expenses: [],
             });
+
+            // Automated Investment Entry (SIPs)
+            // Triggered only when creating the month record for the first time via UPI
+            if (user.mutualFundSips && user.mutualFundSips > 0) {
+                monthlyExpense.expenses.push({
+                    title: 'Investments',
+                    amount: user.mutualFundSips,
+                    subExpenses: [
+                        {
+                            title: 'Mutual Fund SIPs',
+                            amount: user.mutualFundSips,
+                            date: new Date() // Use current date
+                        }
+                    ]
+                });
+            }
         }
 
         // Find existing "UPI" expense
