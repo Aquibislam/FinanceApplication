@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    isUPIconfigured: {
+      type: Boolean,
+      default: false,
+    },
     netPay: {
       type: Number,
       default: null,

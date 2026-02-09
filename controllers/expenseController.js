@@ -416,6 +416,12 @@ exports.addUpiExpense = async (req, res, next) => {
 
         await monthlyExpense.save();
 
+        // Update user flow status
+        if (!user.isUPIconfigured) {
+            user.isUPIconfigured = true;
+            await user.save();
+        }
+
         res.status(200).json({
             success: true,
             data: monthlyExpense,
